@@ -1,0 +1,90 @@
+- name: Deploy Flask Monitoring Dashboard
+  hosts: web
+  become: yes
+
+  tasks:
+    - name: Update and install dependencies
+      apt:
+        update_cache: yes
+        name:
+          - python3-pip
+          - python3-venv
+          - nginx
+        state: present
+
+    - name: Create app directory
+      file:
+        path: /opt/dashboard
+        state: directory
+
+    - name: Copy Flask app
+      copy:
+        src: files/app.py
+        dest: /opt/dashboard/app.py
+
+    - name: Create virtual environment
+      command: python3 -m venv /opt/dashboard/venv
+      args:
+        creates: /opt/dashboard/venv
+
+    - name: Install Flask and Gunicorn
+      command: /opt/dashboard/venv/bin/pip install flask gunicorn
+
+    - name: Create systemd service for Gunicorn
+      copy:
+        dest: /etc/systemd/system/gunicorn-dashboard.service
+        content: |
+          [Unit]
+          Description=Gunicorn for Flask Dashboard
+          After=network.target
+
+          [Service]
+          User=www-data
+          Group=www-data
+          WorkingDirectory=/opt/dashboard
+          ExecStart=/opt/dashboard/venv/bin/gunicorn --bind 127.0.0.1:8000 app:app
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Reload systemd and start Gunicorn
+      shell: |
+        systemctl daemon-reexec
+        systemctl daemon-reload
+        systemctl enable gunicorn-dashboard
+        systemctl restart gunicorn-dashboard
+
+    - name: Configure NGINX
+      copy:
+        dest: /etc/nginx/sites-available/dashboard
+        content: |
+          server {
+              listen 80;
+              server_name _;
+
+              location / {
+                  proxy_pass http://127.0.0.1:8000;
+                  proxy_set_header Host $host;
+                  proxy_set_header X-Real-IP $remote_addr;
+                  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                  proxy_set_header X-Forwarded-Proto $scheme;
+              }
+          }
+
+    - name: Enable dashboard NGINX config
+      file:
+        src: /etc/nginx/sites-available/dashboard
+        dest: /etc/nginx/sites-enabled/dashboard
+        state: link
+        force: yes
+
+    - name: Remove default site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: Restart NGINX
+      service:
+        name: nginx
+        state: restarted
+
