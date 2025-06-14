@@ -1,8 +1,13 @@
 from flask import Flask
+from datetime import datetime
+
 app = Flask(__name__)
+start_time = datetime.now()
+deployment_time = datetime.now().strftime("%B %d, %Y – %I:%M %p")
 
 @app.route('/')
 def dashboard():
+    uptime = datetime.now() - start_time
     return '''
     <html>
     <head>
@@ -55,13 +60,27 @@ def dashboard():
             .btn:hover {
                 background: #0ea5e9;
             }
-            .chart-container {
+            .chart-container, .student-table {
                 margin: 40px auto;
-                max-width: 400px;
+                max-width: 600px;
                 background: #1e293b;
                 padding: 20px;
                 border-radius: 10px;
                 box-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+            }
+            table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+            th, td {
+                padding: 10px;
+                border-bottom: 1px solid #334155;
+                color: #f1f5f9;
+            }
+            th {
+                text-align: left;
+                color: #38bdf8;
             }
             footer {
                 margin-top: 60px;
@@ -93,6 +112,42 @@ def dashboard():
             </p>
             <canvas id="metricsChart"></canvas>
         </div>
+
+        <div class="student-table">
+            <h2 style="color: #38bdf8;">Student Progress Monitor</h2>
+            <table>
+                <tr>
+                    <th>Name</th>
+                    <th>Course</th>
+                    <th>Status</th>
+                </tr>
+                <tr>
+                    <td>Tolu</td>
+                    <td>DevOps with AWS</td>
+                    <td style="color: #10b981;">Ready</td>
+                </tr>
+                <tr>
+                    <td>Blessing</td>
+                    <td>Web Development</td>
+                    <td style="color: #f97316;">Stuck</td>
+                </tr>
+                <tr>
+                    <td>Charles</td>
+                    <td>Data Analysis</td>
+                    <td style="color: #10b981;">Ready</td>
+                </tr>
+                <tr>
+                    <td>Grace</td>
+                    <td>Cybersecurity</td>
+                    <td style="color: #10b981;">Ready</td>
+                </tr>
+            </table>
+        </div>
+
+        <p style="margin-top: 30px; color: #94a3b8; font-size: 14px;">
+            App Uptime: ''' + str(uptime).split('.')[0] + '''<br>
+            Last Deployment: ''' + deployment_time + '''
+        </p>
 
         <script>
             const ctx = document.getElementById('metricsChart').getContext('2d');
